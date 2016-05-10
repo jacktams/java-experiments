@@ -17,3 +17,7 @@ hs_err_pid*
 /buildSrc/build
 /subprojects/*/build
 /subprojects/docs/src/samples/*/*/build
+
+# NetBeans
+.nb-gradle
+.nb-gradle-properties
