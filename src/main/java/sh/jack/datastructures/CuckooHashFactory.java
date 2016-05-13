@@ -23,6 +23,8 @@
  */
 package sh.jack.datastructures;
 
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.Random;
 
 /**
@@ -31,8 +33,8 @@ import java.util.Random;
  */
 public class CuckooHashFactory {
  
-    public static CuckooHash getHash(int size){
-        Random rand = new Random();
+    public static CuckooHash getHash(int size) throws NoSuchAlgorithmException{
+        Random rand = SecureRandom.getInstanceStrong();
         return new CuckooHash(rand.nextInt(),rand.nextInt(),size);
     }
     
