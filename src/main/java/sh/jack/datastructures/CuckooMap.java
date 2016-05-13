@@ -23,10 +23,171 @@
  */
 package sh.jack.datastructures;
 
+import java.util.AbstractMap;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 /**
- *
+ * 
+ * Provides an implementation of Map that uses Cuckoo Hashing.
+ * 
+ * Implementation for curiosity, I doubt the implementation is robust enough
+ * for production environments so caveat emptor. 
+ * 
+ * This implementation is in no way thread safe.
+ * 
+ * @url https://en.wikipedia.org/wiki/Cuckoo_hashing
+ * 
  * @author Jack Tams <dev@jack.sh>
  */
-public class CuckooMap {
+public class CuckooMap<K,V> extends AbstractMap<K,V> {
+    
+    private static final int DEFAULT_SIZE = 10;
+    private static final float DEFAULT_LOADFACTOR = 0.4f;
+    
+    private Entry<K,V> entryStore[][];
+    
+    private CuckooHash hashFunctions[] = new CuckooHash[2];
+    
+    private int currentSize, assignedSize;
+    
+    /**
+     * Construct a CuckooMap of default size and load factor, currently
+     * Size = 10, Load Factor = 0.4
+     */
+    public CuckooMap(){
+        this(DEFAULT_SIZE);
+    }
+    
+    /**
+     * Construct a new CuckooMap with a given sized and loadfactor. 
+     * 
+     * The underlying implementation will attempt to keep within the load factor
+     * implementation details tbd.
+     * 
+     * @param loadFactor
+     * @param startSize 
+     */
+    public CuckooMap(int startSize){
+        this.entryStore = new Entry[2][startSize];
+        this.currentSize = startSize;
+        this.assignedSize = 0;
+             
+        generateHashFunctions(this.currentSize);
+    }
+    
+    private void generateHashFunctions(int size){
+        this.hashFunctions[0] = CuckooHashFactory.getHash(size);
+        this.hashFunctions[1] = CuckooHashFactory.getHash(size);
+    }
+    
+    @Override
+    public int size()
+    {
+        return this.currentSize;
+    }
+    
+    public float getLoadFactor(){
+        return DEFAULT_LOADFACTOR;
+    }
+    
+    public float getCurrentLoadFactor(){
+        return (this.currentSize - this.assignedSize) / this.currentSize;
+    }
+    
+    public V put(K key, V value){
+        
+        // If key is already in the map, update its value, 
+        // and return its value.
+        for( int i = 0; i < this.hashFunctions.length; i++)
+        {
+            int hash = this.hashFunctions[i].getHash(key);
+            Entry<K,V> currentEntry = this.entryStore[i][hash];
+            
+            if ( key.equals(currentEntry) ){
+                return this.entryStore[i][hash].setValue(value);
+            }
+        }
+        
+        //check load factor
+        if ( getCurrentLoadFactor() <= DEFAULT_LOADFACTOR )
+            growMap();
+        
+        
+        return null;
+    }
+    
+    private void growMap(){
+        Set<Entry<K, V>> entrySet = this.entrySet();
+        this.currentSize = currentSize * 2;
+        this.entryStore = new Entry[2][currentSize * 2];
+        
+        rehashMap(entrySet);    
+    }
+        
+    /**
+     * Re-integrates the entry Set provided into the current
+     * map, this should not be used as a intializer, i.e. passing
+     * a entry set bigger than current Map, resize aint cheap.
+     * 
+     * @param entries 
+     */
+    private void rehashMap(Set<Entry<K,V>> entries)
+    {
+        //Regenrate hash based on new size
+        generateHashFunctions(this.currentSize);
+                
+        for( Entry<K,V> entry : entries ){
+            //TODO: More implementation here, what if it conflicts and 
+            //evicts a member
+            this.insert(entry);
+        }
+        
+    }
+    
+    /**
+     * Attempts to insert a entry, return the displaced entry if any.
+     * 
+     * @param entry
+     * @return entry displaced by insert
+     */
+    private Entry<K,V> insert(Entry<K,V> entry) 
+    {
+        //TODO: implememtation a bit wonky, should traverse returning
+        //last eviction, this returns first.
+        for ( int i = 0; i < this.hashFunctions.length; i++ )
+        {
+            int hash = this.hashFunctions[i].getHash(entry.getKey());
+            //currentEntry maybe null
+            Entry<K,V> currentEntry = this.entryStore[i][hash];
+            
+            this.entryStore[i][hash] = entry;
+            return currentEntry;
+        }
+        
+        return null;
+    }
+    
+    
+    /**
+     * Builds a flattened entry set with all current entries of the
+     * CuckooMap.
+     * @return Set containing all current elements of CuckooMap
+     */
+    @Override
+    public Set<Entry<K, V>> entrySet() {
+        Set<Entry<K,V>> returnSet = new LinkedHashSet();
+        
+        for ( int i = 0; i < 2; i++ )
+        {
+            for ( Entry<K,V> entry : this.entryStore[i] )
+            {
+                if ( entry != null )
+                    returnSet.add(entry);
+            }
+        }
+        
+        return returnSet;
+    }
     
 }
