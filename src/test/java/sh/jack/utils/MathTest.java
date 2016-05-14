@@ -21,44 +21,37 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package sh.jack.datastructures;
+package sh.jack.utils;
+
+import static org.testng.Assert.assertEquals;
+import org.testng.annotations.DataProvider;
+import org.testng.annotations.Test;
+
 
 /**
- * Provides a simply hash generation function for objects.
- * 
+ *
  * @author Jack Tams <dev@jack.sh>
  */
-public class CuckooHash<T> {
-  
-    private int hashsize;
-    private int coefficientHigh, coeffecientLow;
-    
-    public CuckooHash(int high, int low, int hashSize)
+public class MathTest
+{
+    @DataProvider
+    public static Object[][] Log2Input() 
     {
-        this.hashsize = sh.jack.utils.Math.log2(hashSize);
-        this.coefficientHigh = high;
-        this.coeffecientLow = low;
+        return new Object[][] 
+        {
+            new Object[] { 42 },
+            new Object[] { 11 },
+            new Object[] { 131 },
+            new Object[] { 254 },
+            new Object[] { Integer.MAX_VALUE }
+        };
     }
+
     
-    /**
-     * Returns a integer hash based on default hashcode of object. 
-     * 
-     * Assumes that the implementor of the object has done a decent job
-     * at implementing hash.
-     * 
-     * @param t object to be hashed.
-     * @return new hash based on hashCode of t, 
-     *         and size of container being hashed into.
-     */
-    public int getHash(Object t)
+    @Test(dataProvider = "Log2Input")
+    public void log2Test( final int val )
     {
-        if ( t == null )
-            return 0;
-        
-        int objectHash = t.hashCode();
-        int upper = ( objectHash >>> 16 ) * this.coefficientHigh;
-        int lower = ( objectHash & 0xFFFF ) * this.coeffecientLow;
-                
-        return (upper + lower) >>> ( 32 - hashsize );
+        int test = (int) (java.lang.Math.log(val) / java.lang.Math.log(2));
+        assertEquals(sh.jack.utils.Math.log2(val), test);       
     }
 }

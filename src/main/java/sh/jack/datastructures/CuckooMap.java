@@ -59,7 +59,8 @@ public class CuckooMap<K,V> extends AbstractMap<K,V>
     /**
      * Construct a CuckooMap of default size, currently 10.
      */
-    public CuckooMap(){
+    public CuckooMap()
+    {
         this(DEFAULT_SIZE);
     }
     
@@ -70,7 +71,8 @@ public class CuckooMap<K,V> extends AbstractMap<K,V>
      * 
      * @param initialSize initial size of map, note only 40% of this capacity is usable.
      */
-    public CuckooMap(int initialSize){
+    public CuckooMap(int initialSize)
+    {
         this.entryStore = new Entry[2][initialSize];
         this.currentSize = initialSize;
         this.assignedSize = 0;
@@ -83,7 +85,8 @@ public class CuckooMap<K,V> extends AbstractMap<K,V>
      * 
      * @param size size of array/bucket being hashed into.
      */
-    private void generateHashFunctions(int size){
+    private void generateHashFunctions(int size)
+    {
         try {
             this.hashFunctions[0] = CuckooHashFactory.getHash(size);
             this.hashFunctions[1] = CuckooHashFactory.getHash(size);
@@ -109,7 +112,8 @@ public class CuckooMap<K,V> extends AbstractMap<K,V>
      * 
      * @return percentage utilisation of map in decimal notation.
      */
-    public double getCurrentLoad(){
+    public double getCurrentLoad()
+    {
         //Dataset is twice as large as currentSize as there are two arrays
         //in the entry store.
         return ((double)this.assignedSize) / (this.currentSize*2); 
@@ -186,7 +190,8 @@ public class CuckooMap<K,V> extends AbstractMap<K,V>
      * 
      * This is reasonably costly, try to size the map appropriately initially.
      */
-    private void grow(){
+    private void grow()
+    {
         Entry<K,V> old[][] = this.entryStore;
         
         this.entryStore = new Entry[2][this.currentSize*2];
@@ -288,7 +293,8 @@ public class CuckooMap<K,V> extends AbstractMap<K,V>
      * @return all current entries.
      */
     @Override
-    public Set<Entry<K, V>> entrySet() {
+    public Set<Entry<K, V>> entrySet()
+    {
         Set<Entry<K,V>> builtSet = new LinkedHashSet<>();
         
         for ( int i = 0; i < this.currentSize; i++ ){

@@ -24,44 +24,19 @@
 package sh.jack.datastructures;
 
 import java.util.AbstractMap.SimpleEntry;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.stream.Collectors;
-import junit.framework.Assert;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import static org.testng.AssertJUnit.assertEquals;
+import org.testng.annotations.Test;
+
 
 /**
  *
  * @author Jack Tams <dev@jack.sh>
  */
 public class CuckooMapTest {
-    
-    public CuckooMapTest() {
-    }
-    
-    @BeforeClass
-    public static void setUpClass() {
-    }
-    
-    @AfterClass
-    public static void tearDownClass() {
-    }
-    
-    @Before
-    public void setUp() {
-    }
-    
-    @After
-    public void tearDown() {
-    }
-   
+       
     /**
      * Checks in-place rehash of map does not cause elements to be lost.
      * Does not use an input that would trigger a grow.
@@ -85,7 +60,8 @@ public class CuckooMapTest {
     }
     
     /**
-     * 
+     * Adds sufficient elements to cause at least one rehash, checks
+     * no elements have been lost.
      */
     @Test
     public void growTest(){

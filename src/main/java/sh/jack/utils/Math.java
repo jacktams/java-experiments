@@ -21,44 +21,28 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package sh.jack.datastructures;
+package sh.jack.utils;
 
 /**
- * Provides a simply hash generation function for objects.
+ * Generic Math Utilities.
  * 
  * @author Jack Tams <dev@jack.sh>
  */
-public class CuckooHash<T> {
-  
-    private int hashsize;
-    private int coefficientHigh, coeffecientLow;
-    
-    public CuckooHash(int high, int low, int hashSize)
-    {
-        this.hashsize = sh.jack.utils.Math.log2(hashSize);
-        this.coefficientHigh = high;
-        this.coeffecientLow = low;
-    }
+public class Math
+{
     
     /**
-     * Returns a integer hash based on default hashcode of object. 
+     * Computes log base 2 for value. 
      * 
-     * Assumes that the implementor of the object has done a decent job
-     * at implementing hash.
+     * Not the most efficient way of doing this, but it works well enough.
      * 
-     * @param t object to be hashed.
-     * @return new hash based on hashCode of t, 
-     *         and size of container being hashed into.
+     * @param value operand for log base 2 op.
+     * @return "value log 2"
      */
-    public int getHash(Object t)
-    {
-        if ( t == null )
+    public static int log2(int value){
+        if (value == 0)
             return 0;
-        
-        int objectHash = t.hashCode();
-        int upper = ( objectHash >>> 16 ) * this.coefficientHigh;
-        int lower = ( objectHash & 0xFFFF ) * this.coeffecientLow;
-                
-        return (upper + lower) >>> ( 32 - hashsize );
+        return 31 - Integer.numberOfLeadingZeros(value);
     }
+    
 }

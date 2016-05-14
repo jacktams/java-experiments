@@ -29,11 +29,17 @@ import java.util.Random;
 
 /**
  *
+ * Simple factory that returns new CuckooHash functions. 
+ * 
+ * Currently not extensible in any way.
+ * 
  * @author Jack Tams <dev@jack.sh>
  */
-public class CuckooHashFactory {
+public class CuckooHashFactory 
+{
  
-    public static CuckooHash getHash(int size) throws NoSuchAlgorithmException{
+    public static CuckooHash getHash(int size) throws NoSuchAlgorithmException
+    {
         Random rand = SecureRandom.getInstanceStrong();
         return new CuckooHash(rand.nextInt(),rand.nextInt(),size);
     }
