@@ -39,7 +39,6 @@ public class MathTest
     {
         return new Object[][] 
         {
-            new Object[] { 0 },
             new Object[] { 42 },
             new Object[] { 11 },
             new Object[] { 131 },
@@ -54,5 +53,11 @@ public class MathTest
     {
         int test = (int) (java.lang.Math.log(val) / java.lang.Math.log(2));
         assertEquals(sh.jack.utils.Math.log2(val), test);       
+    }
+    
+    @Test
+    public void log2ZeroTest()
+    {
+        assertEquals(sh.jack.utils.Math.log2(0), 0);
     }
 }
