@@ -23,9 +23,12 @@
  */
 package sh.jack.datastructures;
 
+import java.security.NoSuchAlgorithmException;
 import java.util.AbstractMap;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * 
@@ -77,8 +80,12 @@ public class CuckooMap<K,V> extends AbstractMap<K,V> {
     }
     
     private void generateHashFunctions(int size){
-        this.hashFunctions[0] = CuckooHashFactory.getHash(size);
-        this.hashFunctions[1] = CuckooHashFactory.getHash(size);
+        try {
+            this.hashFunctions[0] = CuckooHashFactory.getHash(size);
+            this.hashFunctions[1] = CuckooHashFactory.getHash(size);
+        } catch (NoSuchAlgorithmException ex) {
+            Logger.getLogger(CuckooMap.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
     
     @Override
@@ -95,7 +102,17 @@ public class CuckooMap<K,V> extends AbstractMap<K,V> {
         return (this.currentSize - this.assignedSize) / this.currentSize;
     }
     
-    public V put(K key, V value){
+    public int getAssigned()
+    {
+        return this.assignedSize;
+    }
+    
+    public V put(K key, V value)
+    {
+        //check load factor
+        /*System.out.println("Load: " + getCurrentLoadFactor());
+        if ( getCurrentLoadFactor() <= DEFAULT_LOADFACTOR )
+            growMap();*/
         
         // If key is already in the map, update its value, 
         // and return its value.
@@ -106,15 +123,46 @@ public class CuckooMap<K,V> extends AbstractMap<K,V> {
             
             if ( key.equals(currentEntry) ){
                 return this.entryStore[i][hash].setValue(value);
-            }
+            } 
         }
         
-        //check load factor
-        if ( getCurrentLoadFactor() <= DEFAULT_LOADFACTOR )
-            growMap();
+        //haven't been able to complete a simple insert, on to more complex
+        //stuff.
+        Entry<K,V> entryForInsert = new SimpleEntry(key, value);
+        
+        while( entryForInsert != null ){
+            entryForInsert = insertEntry(entryForInsert);
+            
+            if(entryForInsert != null )
+                this.rehashMap();
+        }
         
         
+        //We should have inserted at this point so no entry was already
+        //associated with key.
+        this.assignedSize++;
         return null;
+    }
+    
+    private Entry<K,V> insertEntry(Entry<K,V> entryToInsert)
+    {   
+        
+        Entry<K,V> displacedEntry = null;
+        for ( int i = 0; i <= this.assignedSize; i++ )
+        {
+            int hash = this.hashFunctions[i % 2].getHash(entryToInsert.getKey());
+            
+            if ( this.entryStore[i%2][hash] == null )
+            {
+                this.entryStore[i%2][hash] = entryToInsert;
+                return null;
+            }
+            
+            displacedEntry = this.entryStore[i%2][hash];
+            //displace current value, and return old one.
+            this.entryStore[i%2][hash].setValue(entryToInsert.getValue());
+        }
+        return displacedEntry;
     }
     
     private void growMap(){
@@ -125,6 +173,9 @@ public class CuckooMap<K,V> extends AbstractMap<K,V> {
         rehashMap(entrySet);    
     }
         
+    private void rehashMap(){
+        this.rehashMap(this.entrySet());
+    }
     /**
      * Re-integrates the entry Set provided into the current
      * map, this should not be used as a intializer, i.e. passing
@@ -134,40 +185,17 @@ public class CuckooMap<K,V> extends AbstractMap<K,V> {
      */
     private void rehashMap(Set<Entry<K,V>> entries)
     {
+        System.out.println("Rehashing!");
         //Regenrate hash based on new size
         generateHashFunctions(this.currentSize);
                 
         for( Entry<K,V> entry : entries ){
             //TODO: More implementation here, what if it conflicts and 
             //evicts a member
-            this.insert(entry);
+            this.put(entry.getKey(), entry.getValue());
         }
         
     }
-    
-    /**
-     * Attempts to insert a entry, return the displaced entry if any.
-     * 
-     * @param entry
-     * @return entry displaced by insert
-     */
-    private Entry<K,V> insert(Entry<K,V> entry) 
-    {
-        //TODO: implememtation a bit wonky, should traverse returning
-        //last eviction, this returns first.
-        for ( int i = 0; i < this.hashFunctions.length; i++ )
-        {
-            int hash = this.hashFunctions[i].getHash(entry.getKey());
-            //currentEntry maybe null
-            Entry<K,V> currentEntry = this.entryStore[i][hash];
-            
-            this.entryStore[i][hash] = entry;
-            return currentEntry;
-        }
-        
-        return null;
-    }
-    
     
     /**
      * Builds a flattened entry set with all current entries of the
@@ -190,4 +218,15 @@ public class CuckooMap<K,V> extends AbstractMap<K,V> {
         return returnSet;
     }
     
+    @Override
+    public String toString(){
+        StringBuilder bld = new StringBuilder();
+        
+        for(int i = 0; i < size(); i++){
+            bld.append("[ ").append(this.entryStore[0][i]).append(" ]").append("\t");
+            bld.append("[ ").append(this.entryStore[1][i]).append(" ]").append("\n");
+        }
+        
+        return bld.toString();
+    }
 }

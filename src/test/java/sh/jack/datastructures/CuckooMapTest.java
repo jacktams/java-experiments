@@ -23,41 +23,54 @@
  */
 package sh.jack.datastructures;
 
+import junit.framework.Assert;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import static org.junit.Assert.*;
+
 /**
- * Provides a simply hash generation function for objects.
- * 
+ *
  * @author Jack Tams <dev@jack.sh>
  */
-public class CuckooHash<T> {
-  
-    private int hashsize;
-    private int coefficientHigh, coeffecientLow;
+public class CuckooMapTest {
     
-    public CuckooHash(int high, int low, int hashsize){
-        int lgBuckets = -1;
-            for (; hashsize > 0; hashsize >>>= 1)
-                ++lgBuckets;
-
-        this.hashsize = lgBuckets;
-        this.coefficientHigh = high;
-        this.coeffecientLow = low;
+    public CuckooMapTest() {
     }
     
-    /**
-     * Returns a integer hash based on default hashcode of object. 
-     * 
-     * @param t object to be hashed.
-     * @return
-     */
-    public int getHash(Object t)
-    {
-        if ( t == null )
-            return 0;
-        
-        int objectHash = t.hashCode();
-        int upper = ( objectHash >>> 16 ) * this.coefficientHigh;
-        int lower = ( objectHash & 0xFFFF ) * this.coeffecientLow;
-                
-        return (upper + lower) >>> ( 32 - hashsize );
+    @BeforeClass
+    public static void setUpClass() {
+    }
+    
+    @AfterClass
+    public static void tearDownClass() {
+    }
+    
+    @Before
+    public void setUp() {
+    }
+    
+    @After
+    public void tearDown() {
+    }
+
+    // TODO add test methods here.
+    // The methods must be annotated with annotation @Test. For example:
+    //
+    // @Test
+    // public void hello() {}
+    
+    @Test
+    public void defaultConstructTest(){
+        CuckooMap<String, String> map = new CuckooMap();
+        map.put("Test", "test");
+        Assert.assertEquals(map.getAssigned(),1);
+        map.put("Test2", "Test2");
+        Assert.assertEquals(map.getAssigned(),2);
+        map.put("Test3", "Test3");
+        Assert.assertEquals(map.getAssigned(),3);
+        System.out.println(map);
     }
 }

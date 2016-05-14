@@ -37,4 +37,15 @@ dependencies {
     testCompile 'junit:junit:4.12'
 }
 
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+}
+
+test {
+    testLogging {
+        events "passed", "skipped", "failed", "standardOut", "standardError"
+    }
+}        
+
 defaultTasks 'build'
