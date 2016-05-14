@@ -37,10 +37,13 @@ import java.util.Random;
  */
 public class CuckooHashFactory 
 {
- 
+    private static Random rand = null;
+    
     public static CuckooHash getHash(int size) throws NoSuchAlgorithmException
     {
-        Random rand = SecureRandom.getInstanceStrong();
+        if ( rand == null )
+            rand = SecureRandom.getInstance("SHA1PRNG");    
+        
         return new CuckooHash(rand.nextInt(),rand.nextInt(),size);
     }
     
