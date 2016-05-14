@@ -4,4 +4,7 @@ jdk:
   - oraclejdk8
   
 after_success:
-- ./gradlew cobertura coveralls
+  - ./gradlew cobertura coveralls
+
+before_script:
+  - "export JAVA_OPTS=-Djava.security.egd=file:/dev/./urandom"

@@ -40,7 +40,7 @@ public class CuckooHashFactory
  
     public static CuckooHash getHash(int size) throws NoSuchAlgorithmException
     {
-        Random rand = new Random();
+        Random rand = SecureRandom.getInstanceStrong();
         return new CuckooHash(rand.nextInt(),rand.nextInt(),size);
     }
     
