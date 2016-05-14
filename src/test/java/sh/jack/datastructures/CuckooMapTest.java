@@ -23,6 +23,12 @@
  */
 package sh.jack.datastructures;
 
+import java.util.AbstractMap.SimpleEntry;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.stream.Collectors;
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -55,22 +61,44 @@ public class CuckooMapTest {
     @After
     public void tearDown() {
     }
-
-    // TODO add test methods here.
-    // The methods must be annotated with annotation @Test. For example:
-    //
-    // @Test
-    // public void hello() {}
-    
+   
+    /**
+     * Checks in-place rehash of map does not cause elements to be lost.
+     * Does not use an input that would trigger a grow.
+     */
     @Test
-    public void defaultConstructTest(){
+    public void inplaceRehashTest(){
+        Set<Entry<String,String>> testSet = new HashSet();
+        
         CuckooMap<String, String> map = new CuckooMap();
-        map.put("Test", "test");
-        Assert.assertEquals(map.getAssigned(),1);
-        map.put("Test2", "Test2");
-        Assert.assertEquals(map.getAssigned(),2);
-        map.put("Test3", "Test3");
-        Assert.assertEquals(map.getAssigned(),3);
-        System.out.println(map);
+        
+        for(int i =0; i < 5; i++)
+        {
+            map.put("key"+i, "value"+i);
+            testSet.add(new SimpleEntry("key"+i, "value"+i));
+        }
+        
+        for( int i = 0; i < 10; i++){
+            map.rehash();
+            assertEquals(map.entrySet(), testSet);
+        }
     }
+    
+    /**
+     * 
+     */
+    @Test
+    public void growTest(){
+       Set<Entry<String,String>> testSet = new HashSet();
+       CuckooMap<String, String> map = new CuckooMap();
+        
+       for( int i = 0; i < 50; i++ )
+       {
+           testSet.add(new SimpleEntry("key"+i, "value"+i));
+           map.put("key"+i, "value"+i);
+       }
+       
+       assertEquals(map.entrySet(), testSet);
+    }
+    
 }

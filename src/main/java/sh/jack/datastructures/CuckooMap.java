@@ -25,6 +25,7 @@ package sh.jack.datastructures;
 
 import java.security.NoSuchAlgorithmException;
 import java.util.AbstractMap;
+import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.logging.Level;
@@ -43,10 +44,11 @@ import java.util.logging.Logger;
  * 
  * @author Jack Tams <dev@jack.sh>
  */
-public class CuckooMap<K,V> extends AbstractMap<K,V> {
+public class CuckooMap<K,V> extends AbstractMap<K,V>
+{
     
     private static final int DEFAULT_SIZE = 10;
-    private static final float DEFAULT_LOADFACTOR = 0.4f;
+    private static final double DEFAULT_LOADFACTOR = 0.4;
     
     private Entry<K,V> entryStore[][];
     
@@ -55,30 +57,32 @@ public class CuckooMap<K,V> extends AbstractMap<K,V> {
     private int currentSize, assignedSize;
     
     /**
-     * Construct a CuckooMap of default size and load factor, currently
-     * Size = 10, Load Factor = 0.4
+     * Construct a CuckooMap of default size, currently 10.
      */
     public CuckooMap(){
         this(DEFAULT_SIZE);
     }
     
     /**
-     * Construct a new CuckooMap with a given sized and loadfactor. 
+     * Construct a new CuckooMap with a given initial size. 
      * 
-     * The underlying implementation will attempt to keep within the load factor
-     * implementation details tbd.
+     * Generates two hash functions and a initial sized map.
      * 
-     * @param loadFactor
-     * @param startSize 
+     * @param initialSize initial size of map, note only 40% of this capacity is usable.
      */
-    public CuckooMap(int startSize){
-        this.entryStore = new Entry[2][startSize];
-        this.currentSize = startSize;
+    public CuckooMap(int initialSize){
+        this.entryStore = new Entry[2][initialSize];
+        this.currentSize = initialSize;
         this.assignedSize = 0;
              
         generateHashFunctions(this.currentSize);
     }
     
+    /**
+     * Generates 2 new hash functions based on the provided size.
+     * 
+     * @param size size of array/bucket being hashed into.
+     */
     private void generateHashFunctions(int size){
         try {
             this.hashFunctions[0] = CuckooHashFactory.getHash(size);
@@ -88,145 +92,234 @@ public class CuckooMap<K,V> extends AbstractMap<K,V> {
         }
     }
     
-    @Override
-    public int size()
+    /**
+     * Gives the current maximum size of the map, this does not take into consideration
+     * the 40% load factor, so the usable capacity is 40% of this value.
+     * 
+     * @return maximum underlying size of the map.
+     */
+    public int maxSize()
     {
         return this.currentSize;
     }
     
-    public float getLoadFactor(){
-        return DEFAULT_LOADFACTOR;
+    /**
+     * Calculates the current load factor for the map, to remain functional
+     * the CuckooMap should never exceed a 40% (0.4) utilisation.
+     * 
+     * @return percentage utilisation of map in decimal notation.
+     */
+    public double getCurrentLoad(){
+        //Dataset is twice as large as currentSize as there are two arrays
+        //in the entry store.
+        return ((double)this.assignedSize) / (this.currentSize*2); 
     }
     
-    public float getCurrentLoadFactor(){
-        return (this.currentSize - this.assignedSize) / this.currentSize;
-    }
-    
-    public int getAssigned()
+    /**
+     * Returns the current number of items in the map.
+     * @return current number of items in the map.
+     */
+    @Override
+    public int size()
     {
         return this.assignedSize;
     }
-    
+
+    /**
+     * Inserts a key value pair into the map, if the key already exists in the map,
+     * the associated value will be updated and the old value returned.
+     * 
+     * If the pair is inserted cleanly returns null.
+     * 
+     * Both the Key and Value objects passed in, should implement a good hashCode
+     * and equals method.
+     * 
+     * @param key key associated with entry.
+     * @param value value associated with key.
+     * @return old value for key, otherwise null.
+     */
     public V put(K key, V value)
     {
-        //check load factor
-        /*System.out.println("Load: " + getCurrentLoadFactor());
-        if ( getCurrentLoadFactor() <= DEFAULT_LOADFACTOR )
-            growMap();*/
-        
-        // If key is already in the map, update its value, 
-        // and return its value.
-        for( int i = 0; i < this.hashFunctions.length; i++)
+        // Check for existing entry with same key, if found replace its value
+        // and return the old value.
+        for(int i = 0; i < 2; i++)
         {
             int hash = this.hashFunctions[i].getHash(key);
-            Entry<K,V> currentEntry = this.entryStore[i][hash];
+            Entry<K,V> entry = this.entryStore[i][hash];
+            if( entry != null && key.equals(entry.getKey())){
+                V displacedValue = entry.getValue();
+                this.entryStore[i][hash].setValue(value);
+                return displacedValue;
+            }
+        }
+
+        //check load factor
+        if ( this.getCurrentLoad() >= DEFAULT_LOADFACTOR )
+        {
+            grow();
+        }
+        //Otherwise its a new value so needs to be inserted.
+        Entry<K,V> entryToInsert = new SimpleEntry(key,value);
+        
+        for(;;)
+        {
+            entryToInsert = insert(entryToInsert);
             
-            if ( key.equals(currentEntry) ){
-                return this.entryStore[i][hash].setValue(value);
-            } 
+            if( entryToInsert == null )
+                break;
+            
+            //Otherwise, we have something displaced - rehash
+            //and attempt to reinsert.
+            rehash();
+            
         }
         
-        //haven't been able to complete a simple insert, on to more complex
-        //stuff.
-        Entry<K,V> entryForInsert = new SimpleEntry(key, value);
-        
-        while( entryForInsert != null ){
-            entryForInsert = insertEntry(entryForInsert);
-            
-            if(entryForInsert != null )
-                this.rehashMap();
-        }
-        
-        
-        //We should have inserted at this point so no entry was already
-        //associated with key.
+        //Increment counter
         this.assignedSize++;
+                
         return null;
     }
     
-    private Entry<K,V> insertEntry(Entry<K,V> entryToInsert)
-    {   
+    /**
+     * Doubles the size underlying object store, and rehashes all the 
+     * objects with new hashes.
+     * 
+     * This is reasonably costly, try to size the map appropriately initially.
+     */
+    private void grow(){
+        Entry<K,V> old[][] = this.entryStore;
         
-        Entry<K,V> displacedEntry = null;
-        for ( int i = 0; i <= this.assignedSize; i++ )
+        this.entryStore = new Entry[2][this.currentSize*2];
+        this.currentSize = this.entryStore[0].length;
+        
+        int insertPtr = 0;
+        for(int i = 0; i < 2; i++)
         {
-            int hash = this.hashFunctions[i % 2].getHash(entryToInsert.getKey());
-            
-            if ( this.entryStore[i%2][hash] == null )
+            for ( Entry<K,V> entry : old[i])
             {
-                this.entryStore[i%2][hash] = entryToInsert;
+                if( entry != null )
+                    this.entryStore[0][insertPtr++] = entry;
+            }
+        }
+        
+        rehash();
+    }
+    
+    /**
+     * Rebuilds the Map with new hash functions, will repeatedly rehash if there
+     * are any clashes of entries.
+     */
+    protected void rehash()
+    {
+        Entry<K,V> old[] = this.entrySet().toArray(new Entry[0]);
+        
+        // Keep rehashing until all entries go back cleanly.
+        for(;;)
+        {
+            this.generateHashFunctions(currentSize);
+            //clear array
+            Arrays.fill(this.entryStore[0], null);
+            Arrays.fill(this.entryStore[1], null);
+            
+            //repeat until Entries insert cleanly, theoretically should be rare
+            //if hash function is sufficiently good.
+            if ( rehashHelper(old) == null )
+                break;
+        }
+        
+    }
+    
+    /**
+     * Takes array of old entries, and attempts to insert them all
+     * into the current CuckooMap, it will return the first displaced entry
+     * if unable to cleanly insert otherwise returns null.
+     * 
+     * @param oldEntries
+     * @return first displaced entry or null
+     */
+    private Entry<K,V> rehashHelper(Entry<K,V>[] oldEntries)
+    {                      
+        Entry<K,V> currentEntry = null;
+        for( Entry<K,V> entry : oldEntries )
+        {
+            currentEntry = this.insert(entry);
+            if( currentEntry != null )
+                return currentEntry;
+        }       
+        
+        return currentEntry;
+    }
+    
+    /**
+     * Inserts entry into map, if insertion causes an existing entry to be
+     * evicted, this evicted entry is returned. 
+     * 
+     * It is assumed that the caller, as already checked for trivial insertions.
+     * i.e. entry updates an existing key. 
+     * 
+     * @param entry new entry to insert.
+     * @return evicted entry otherwise null if cleanly inserted.
+     */
+    private Entry<K,V> insert(Entry<K,V> entry)
+    {
+        Entry<K,V> displaced = null;
+        for(int i = 0; i < this.size() + 1; i++)
+        {
+            int hash = this.hashFunctions[ i % 2 ].getHash(entry.getKey());
+            displaced = this.entryStore[ i % 2 ][hash];
+            
+            if( displaced == null )
+            {
+                //clean insert, add and return null.
+                this.entryStore[ i % 2 ][hash] = entry;
                 return null;
             }
             
-            displacedEntry = this.entryStore[i%2][hash];
-            //displace current value, and return old one.
-            this.entryStore[i%2][hash].setValue(entryToInsert.getValue());
+            this.entryStore[ i % 2 ][hash] = entry;
+            return displaced;            
         }
-        return displacedEntry;
+        return null;
     }
     
-    private void growMap(){
-        Set<Entry<K, V>> entrySet = this.entrySet();
-        this.currentSize = currentSize * 2;
-        this.entryStore = new Entry[2][currentSize * 2];
-        
-        rehashMap(entrySet);    
-    }
-        
-    private void rehashMap(){
-        this.rehashMap(this.entrySet());
-    }
+    
     /**
-     * Re-integrates the entry Set provided into the current
-     * map, this should not be used as a intializer, i.e. passing
-     * a entry set bigger than current Map, resize aint cheap.
+     * Flattens map into Set containing all current entries.
      * 
-     * @param entries 
-     */
-    private void rehashMap(Set<Entry<K,V>> entries)
-    {
-        System.out.println("Rehashing!");
-        //Regenrate hash based on new size
-        generateHashFunctions(this.currentSize);
-                
-        for( Entry<K,V> entry : entries ){
-            //TODO: More implementation here, what if it conflicts and 
-            //evicts a member
-            this.put(entry.getKey(), entry.getValue());
-        }
-        
-    }
-    
-    /**
-     * Builds a flattened entry set with all current entries of the
-     * CuckooMap.
-     * @return Set containing all current elements of CuckooMap
+     * @return all current entries.
      */
     @Override
     public Set<Entry<K, V>> entrySet() {
-        Set<Entry<K,V>> returnSet = new LinkedHashSet();
+        Set<Entry<K,V>> builtSet = new LinkedHashSet<>();
         
-        for ( int i = 0; i < 2; i++ )
-        {
-            for ( Entry<K,V> entry : this.entryStore[i] )
-            {
-                if ( entry != null )
-                    returnSet.add(entry);
+        for ( int i = 0; i < this.currentSize; i++ ){
+            for( int j = 0; j < 2; j++ ){
+                if(this.entryStore[j][i] != null )
+                    builtSet.add(this.entryStore[j][i]);
             }
         }
         
-        return returnSet;
+        return builtSet;
     }
     
-    @Override
-    public String toString(){
-        StringBuilder bld = new StringBuilder();
+    /**
+     * Gives a rudimentary text representation of map.
+     * 
+     * @return text representation of current map.
+     */
+    public String toString()
+    {
+    
+        StringBuilder stringBuilder = new StringBuilder();
         
-        for(int i = 0; i < size(); i++){
-            bld.append("[ ").append(this.entryStore[0][i]).append(" ]").append("\t");
-            bld.append("[ ").append(this.entryStore[1][i]).append(" ]").append("\n");
+        for( int i = 0; i < this.currentSize; i++ )
+        {
+            stringBuilder.append(this.entryStore[0][i]);
+            stringBuilder.append("\t");
+            stringBuilder.append(this.entryStore[1][i]);
+            stringBuilder.append("\n");
         }
         
-        return bld.toString();
+        return stringBuilder.toString();
     }
+    
 }
