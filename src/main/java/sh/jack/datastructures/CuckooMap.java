@@ -71,9 +71,11 @@ public class CuckooMap<K,V> extends AbstractMap<K,V>
      * 
      * @param initialSize initial size of map, note only 40% of this capacity is usable.
      */
+    @SuppressWarnings("unchecked")
     public CuckooMap(int initialSize)
     {
-        this.entryStore = new Entry[2][initialSize];
+        
+        this.entryStore = (Entry<K,V>[][]) new Entry[2][initialSize];
         this.currentSize = initialSize;
         this.assignedSize = 0;
              
@@ -163,7 +165,7 @@ public class CuckooMap<K,V> extends AbstractMap<K,V>
             grow();
         }
         //Otherwise its a new value so needs to be inserted.
-        Entry<K,V> entryToInsert = new SimpleEntry(key,value);
+        Entry<K,V> entryToInsert = new SimpleEntry<>(key,value);
         
         for(;;)
         {
@@ -190,11 +192,12 @@ public class CuckooMap<K,V> extends AbstractMap<K,V>
      * 
      * This is reasonably costly, try to size the map appropriately initially.
      */
+    @SuppressWarnings("unchecked")
     private void grow()
     {
         Entry<K,V> old[][] = this.entryStore;
         
-        this.entryStore = new Entry[2][this.currentSize*2];
+        this.entryStore = (Entry<K,V>[][]) new Entry[2][this.currentSize*2];
         this.currentSize = this.entryStore[0].length;
         
         int insertPtr = 0;
@@ -216,7 +219,7 @@ public class CuckooMap<K,V> extends AbstractMap<K,V>
      */
     protected void rehash()
     {
-        Entry<K,V> old[] = this.entrySet().toArray(new Entry[0]);
+        Set<Entry<K,V>> old = this.entrySet();
         
         // Keep rehashing until all entries go back cleanly.
         for(;;)
@@ -242,7 +245,7 @@ public class CuckooMap<K,V> extends AbstractMap<K,V>
      * @param oldEntries
      * @return first displaced entry or null
      */
-    private Entry<K,V> rehashHelper(Entry<K,V>[] oldEntries)
+    private Entry<K,V> rehashHelper(Set<Entry<K,V>> oldEntries)
     {                      
         Entry<K,V> currentEntry = null;
         for( Entry<K,V> entry : oldEntries )

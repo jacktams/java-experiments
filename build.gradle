@@ -35,7 +35,11 @@ dependencies {
 test.useTestNG()
 compileJava {
     options.encoding = 'UTF-8'
-    options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+    options.compilerArgs << "-Xlint:unchecked"
+}
+
+compileTestJava {    
+    options.compilerArgs << "-Xlint:unchecked"
 }
 
 test {

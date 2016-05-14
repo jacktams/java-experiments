@@ -43,14 +43,14 @@ public class CuckooMapTest {
      */
     @Test
     public void inplaceRehashTest(){
-        Set<Entry<String,String>> testSet = new HashSet();
+        Set<Entry<String,String>> testSet = new HashSet<>();
         
-        CuckooMap<String, String> map = new CuckooMap();
+        CuckooMap<String, String> map = new CuckooMap<>();
         
         for(int i =0; i < 5; i++)
         {
             map.put("key"+i, "value"+i);
-            testSet.add(new SimpleEntry("key"+i, "value"+i));
+            testSet.add(new SimpleEntry<>("key"+i, "value"+i));
         }
         
         for( int i = 0; i < 10; i++){
@@ -65,12 +65,12 @@ public class CuckooMapTest {
      */
     @Test
     public void growTest(){
-       Set<Entry<String,String>> testSet = new HashSet();
-       CuckooMap<String, String> map = new CuckooMap();
+       Set<Entry<String,String>> testSet = new HashSet<>();
+       CuckooMap<String, String> map = new CuckooMap<>();
         
        for( int i = 0; i < 50; i++ )
        {
-           testSet.add(new SimpleEntry("key"+i, "value"+i));
+           testSet.add(new SimpleEntry<>("key"+i, "value"+i));
            map.put("key"+i, "value"+i);
        }
        
