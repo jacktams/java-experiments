@@ -39,6 +39,7 @@ public class MathTest
     {
         return new Object[][] 
         {
+            new Object[] { 0 },
             new Object[] { 42 },
             new Object[] { 11 },
             new Object[] { 131 },
